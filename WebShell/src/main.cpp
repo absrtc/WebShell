@@ -23,6 +23,7 @@ bool g_Resizable = true;
 bool g_Maximizable = true;
 bool g_DevTools = true;
 bool g_Shadow = true;
+std::wstring g_URL = L"https://www.bing.com";
 
 std::wstring GetJsonStr(const std::string& c, std::string k) {
     size_t p = c.find("\"" + k + "\"");
@@ -60,6 +61,7 @@ void LoadConfig() {
     g_Maximizable = GetJsonBool(c, "maximizable");
     g_DevTools = GetJsonBool(c, "devtools");
     g_Shadow = GetJsonBool(c, "shadow");
+    g_URL = GetJsonStr(c, "url");
 }
 
 LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
@@ -71,7 +73,6 @@ LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
 
     if (m == WM_NCCALCSIZE && !g_Frame && w == TRUE) {
         NCCALCSIZE_PARAMS* params = (NCCALCSIZE_PARAMS*)l;
-
         if (IsMaximized(h)) {
             WINDOWINFO wi = { sizeof(wi) };
             GetWindowInfo(h, &wi);
@@ -80,7 +81,6 @@ LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             params->rgrc[0].right -= wi.cxWindowBorders;
             params->rgrc[0].bottom -= wi.cyWindowBorders;
         }
-
         return 0;
     }
 
@@ -91,9 +91,7 @@ LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             ScreenToClient(h, &pt);
             RECT rc;
             GetClientRect(h, &rc);
-
             const int BORDER_SIZE = 5;
-
             bool left = pt.x < BORDER_SIZE;
             bool right = pt.x > rc.right - BORDER_SIZE;
             bool top = pt.y < BORDER_SIZE;
@@ -112,30 +110,12 @@ LRESULT CALLBACK WndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         }
         return hit;
     }
-
     return DefWindowProc(h, m, w, l);
 }
 
 int WINAPI WinMain(HINSTANCE hI, HINSTANCE, LPSTR, int nS) {
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    int argc;
-    wchar_t** argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    std::wstring targetUrl = L"https://www.bing.com";
-    bool useConfig = false;
-
-    for (int i = 1; i < argc; i++) {
-        std::wstring a = argv[i];
-        if (a == L"-config=true") useConfig = true;
-        if (a == L"-shadow=false") g_Shadow = false;
-        if (a.find(L"-url=") == 0) {
-            targetUrl = a.substr(5);
-            if (!targetUrl.empty() && targetUrl.front() == L'\"') targetUrl = targetUrl.substr(1, targetUrl.length() - 2);
-        }
-    }
-
-    if (useConfig) LoadConfig();
-
-    LocalFree(argv);
+    LoadConfig();
 
     DWORD style = WS_OVERLAPPEDWINDOW;
     if (!g_Resizable) style &= ~WS_THICKFRAME;
@@ -148,7 +128,6 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE, LPSTR, int nS) {
     if (g_Shadow) {
         MARGINS margins = { 0, 0, 0, 1 };
         DwmExtendFrameIntoClientArea(hWnd, &margins);
-
         DWM_WINDOW_CORNER_PREFERENCE preference = DWMWCP_ROUND;
         DwmSetWindowAttribute(hWnd, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
     }
@@ -166,20 +145,20 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE, LPSTR, int nS) {
     CreateDirectoryW(dataPath.c_str(), NULL);
 
     CreateCoreWebView2EnvironmentWithOptions(nullptr, dataPath.c_str(), nullptr,
-        Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>([hWnd, targetUrl](HRESULT r, ICoreWebView2Environment* env) -> HRESULT {
-            env->CreateCoreWebView2Controller(hWnd, Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>([hWnd, targetUrl](HRESULT r, ICoreWebView2Controller* ctrl) -> HRESULT {
+        Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>([hWnd](HRESULT r, ICoreWebView2Environment* env) -> HRESULT {
+            env->CreateCoreWebView2Controller(hWnd, Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>([hWnd](HRESULT r, ICoreWebView2Controller* ctrl) -> HRESULT {
                 webviewController = ctrl;
                 webviewController->get_CoreWebView2(&webviewWindow);
 
                 wil::com_ptr<ICoreWebView2Settings> set;
                 webviewWindow->get_Settings(&set);
                 set->put_IsWebMessageEnabled(TRUE);
+                set->put_AreDevToolsEnabled(g_DevTools ? TRUE : FALSE);
 
                 webviewWindow->add_WebMessageReceived(Callback<ICoreWebView2WebMessageReceivedEventHandler>([hWnd](ICoreWebView2* s, ICoreWebView2WebMessageReceivedEventArgs* a) -> HRESULT {
                     wil::unique_cotaskmem_string m;
                     if (SUCCEEDED(a->TryGetWebMessageAsString(&m))) {
                         std::wstring sm = m.get();
-
                         HWND mainWnd = GetAncestor(hWnd, GA_ROOT);
                         if (!mainWnd) mainWnd = hWnd;
 
@@ -187,30 +166,29 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE, LPSTR, int nS) {
                             ReleaseCapture();
                             SendMessage(mainWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
                         }
-                        else if (sm == L"min") {
-                            ShowWindow(mainWnd, SW_MINIMIZE);
-                        }
+                        else if (sm == L"min") ShowWindow(mainWnd, SW_MINIMIZE);
                         else if (sm == L"max") {
                             WINDOWPLACEMENT wp = { sizeof(wp) };
                             GetWindowPlacement(mainWnd, &wp);
                             ShowWindow(mainWnd, (wp.showCmd == SW_MAXIMIZE) ? SW_RESTORE : SW_MAXIMIZE);
                         }
-                        else if (sm == L"close") {
-                            SendMessage(mainWnd, WM_CLOSE, 0, 0);
-                        }
+                        else if (sm == L"close") SendMessage(mainWnd, WM_CLOSE, 0, 0);
                     }
                     return S_OK;
                     }).Get(), nullptr);
 
                 RECT b; GetClientRect(hWnd, &b);
                 webviewController->put_Bounds(b);
-                webviewWindow->Navigate(targetUrl.c_str());
+                webviewWindow->Navigate(g_URL.c_str());
                 return S_OK;
                 }).Get());
             return S_OK;
             }).Get());
 
     MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0)) { TranslateMessage(&msg); DispatchMessage(&msg); }
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
     return (int)msg.wParam;
 }
