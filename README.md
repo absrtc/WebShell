@@ -10,11 +10,13 @@ You can either download the source code or clone the repository. Click the `code
 
 After installing and building the project (you need Visual Studio and C++ Build Tools), you can either run it directly (goes to bing.com) or you can run it with arguments.
 
-# Arguments
+# Arguments (OUTDATED)
+
+Arguments are no longer supported in WebShell.
 
 - `-config=true` Tells the app to look for a config in the exe folder (This will be changed to a different, better approach soon)
 - `-shadow=false` Removes the shadow on frameless windows. (It's usually not there, but it doesn't create it regardless).
-- `-url=""` Tells the app what URL to visit. Example: `-url="http://127.0.0.1:5500"`
+- `-url=""` Tells the app what URL to visit. Example: `-url="http://127.0.0.1:5500"`~~~
 
 # API Usage
 
@@ -134,6 +136,7 @@ Here are all the options, aswell as an example config.
 - `fullscreen`: Determines if the window is fullscreen
 - `devtools`: Determines if devtools can be used/opened
 - `shadow`: Determines if a window shadow gets created
+- `url`: The url for the webview to load
 
 Below is an example configuration for the app. I'm planning on adding the URL here (so it's not needed in the args).
 
@@ -147,7 +150,8 @@ Below is an example configuration for the app. I'm planning on adding the URL he
   "maximizable": true,
   "fullscreen": false,
   "devtools": true,
-  "shadow": true
+  "shadow": true,
+  "url": "https://bing.com"
 }
 ```
 
