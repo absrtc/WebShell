@@ -119,6 +119,38 @@ After installing and building the project (you need Visual Studio and C++ Build 
 
 ```
 
+# Configuration
+
+If you are using the `-config=true` arg, make a file called `webshell_config.json` in the exe folder.
+
+Here are all the options, aswell as an example config.
+
+- `title`: The title of the window
+- `width`: The width of the window
+- `height`: The height of the window
+- `frame`: Determines if WebShell should create a frame
+- `resizable`: Determines if the window should be resizable
+- `maximizable`: Determines if the window should be maximizable
+- `fullscreen`: Determines if the window is fullscreen
+- `devtools`: Determines if devtools can be used/opened
+- `shadow`: Determines if a window shadow gets created
+
+Below is an example configuration for the app. I'm planning on adding the URL here (so it's not needed in the args).
+
+```
+{
+  "title": "My WebShell App",
+  "width": 1380,
+  "height": 720,
+  "frame": false,
+  "resizable": true,
+  "maximizable": true,
+  "fullscreen": false,
+  "devtools": true,
+  "shadow": true
+}
+```
+
 # Contributions
 
 If you would like to contribute, make a pull request!
