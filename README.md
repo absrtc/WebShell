@@ -12,9 +12,9 @@ After installing and building the project (you need Visual Studio and C++ Build 
 
 # Arguments
 
-`-config=true` Tells the app to look for a config in the exe folder (This will be changed to a different, better approach soon)
-`-shadow=false` Removes the shadow on frameless windows. (It's usually not there, but it doesn't create it regardless).
-`-url=""` Tells the app what URL to visit. Example: `-url="http://127.0.0.1:5500"`
+- `-config=true` Tells the app to look for a config in the exe folder (This will be changed to a different, better approach soon)
+- `-shadow=false` Removes the shadow on frameless windows. (It's usually not there, but it doesn't create it regardless).
+- `-url=""` Tells the app what URL to visit. Example: `-url="http://127.0.0.1:5500"`
 
 # API Usage
 
